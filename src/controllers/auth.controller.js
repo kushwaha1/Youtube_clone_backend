@@ -4,11 +4,11 @@ import jwt from "jsonwebtoken";
 
 // Function to generate a signed JWT token for a user
 const signToken = (user) => {
-  return jwt.sign(
-    { id: user._id, email: user.email },        // Payload data (user ID and email)
-    process.env.JWT_SECRET,                     // Secret key for signing
-    { expiresIn: process.env.JWT_EXPIRES_IN || '1h' } // Expiration time (default: 1 hour)
-  );
+    return jwt.sign(
+        { id: user._id, email: user.email },        // Payload data (user ID and email)
+        process.env.JWT_SECRET,                     // Secret key for signing
+        { expiresIn: process.env.JWT_EXPIRES_IN || '1h' } // Expiration time (default: 1 hour)
+    );
 };
 
 // -------------------- REGISTER USER --------------------
@@ -29,6 +29,16 @@ export const register = async (req, res) => {
         // Validate password length
         if (password.length < 8) {
             return res.status(400).json({ statusCode: 400, message: 'Password must be at least 8 characters' });
+        }
+
+        // Regex for uppercase, lowercase, number, special char
+        const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).+$/;
+
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({
+                statusCode: 400,
+                message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+            });
         }
 
         // Check if user already exists
