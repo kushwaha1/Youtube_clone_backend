@@ -1,6 +1,7 @@
 import User from "../models/User.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import uploadToCloudinary from "../utils/uploadToCloudinary.js";
 
 // Function to generate a signed JWT token for a user
 const signToken = (user) => {
@@ -16,7 +17,12 @@ export const register = async (req, res) => {
     try {
         const body = req.body || {};
         const { name, userName, email, password } = body;
-        const avatar = req.file?.path; // optional avatar
+        let avatar = null;
+        
+        if(req.file) {
+            const result = await uploadToCloudinary(req.file.buffer);
+            avatar = result.secure_url;
+        }
 
         // Missing fields check
         if (!name || !userName || !email || !password) {
