@@ -29,7 +29,7 @@ router.get("/me", authMiddleware, getMyChannel); // Get my channel (MUST come be
 // Parameterized routes (after specific routes)
 router.get("/:channelId", getChannelById); // Get single channel
 router.get("/:channelId/videos", getChannelVideos); // Get channel videos
-router.get("/:channelId/subscription-status", checkSubscription); // Check subscription
+router.get("/:channelId/subscription-status", authMiddleware, checkSubscription); // Check subscription
 
 // Create, Update, Delete (Auth + File Upload)
 router.post("/", authMiddleware, uploadImage.single("channelBanner"), createChannel); // Use existing multer
