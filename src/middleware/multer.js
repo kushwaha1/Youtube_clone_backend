@@ -1,7 +1,19 @@
 import multer from "multer";
 
-const storage = multer.memoryStorage();
+// Multer middleware for handling image uploads
+export const uploadImage = multer({
+  // Store files in memory as buffer (not on disk)
+  storage: multer.memoryStorage(),
 
-export const upload = multer({
-  storage,
+  // Limit file size to 10 MB
+  limits: { fileSize: 10 * 1024 * 1024 },
+
+  // Accept only image files
+  fileFilter(req, file, cb) {
+    if (!file.mimetype.startsWith("image/")) {
+      cb(new Error("Only images allowed"), false); // Reject non-image files
+    } else {
+      cb(null, true); // Accept file
+    }
+  }
 });
