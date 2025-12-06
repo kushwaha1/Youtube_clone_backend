@@ -15,6 +15,7 @@ const channelSchema = new mongoose.Schema({
     },
 
     subscribers: { type: Number, default: 0 },               // Number of subscribers
+    subscriberList: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Track which users subscribed
     videos: [{ type: mongoose.Schema.Types.ObjectId, ref: "Video" }], // Videos uploaded to this channel
     createdAt: { type: Date, default: Date.now }             // Channel creation date
 });
