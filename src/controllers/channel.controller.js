@@ -249,7 +249,14 @@ export const subscribeChannel = async (req, res) => {
         if (channel.owner.toString() === req.user._id.toString())
             return res.status(400).json({ success: false, message: "Cannot subscribe to your own channel" });
 
-        channel.subscribers += 1;
+        // Check if user already subscribed
+        if (channel.subscriberList.includes(req.user._id)) {
+            return res.status(400).json({ success: false, message: "Already subscribed" });
+        }
+
+        // Add user to subscriberList and increment count
+        channel.subscriberList.push(req.user._id);
+        channel.subscribers = channel.subscriberList.length;
         await channel.save();
 
         res.status(200).json({ success: true, message: "Subscribed successfully", subscribers: channel.subscribers });
@@ -269,7 +276,11 @@ export const unsubscribeChannel = async (req, res) => {
         const channel = await Channel.findById(channelId);
         if (!channel) return res.status(404).json({ success: false, message: "Channel not found" });
 
-        channel.subscribers = Math.max(0, channel.subscribers - 1);
+        // Remove user if subscribed
+        channel.subscriberList = channel.subscriberList.filter(
+            userId => userId.toString() !== req.user._id.toString()
+        );
+        channel.subscribers = channel.subscriberList.length;
         await channel.save();
 
         res.status(200).json({ success: true, message: "Unsubscribed successfully", subscribers: channel.subscribers });
@@ -289,8 +300,9 @@ export const checkSubscription = async (req, res) => {
         const channel = await Channel.findById(channelId);
         if (!channel) return res.status(404).json({ success: false, message: "Channel not found" });
 
-        // For now, always returning false (could be extended)
-        res.status(200).json({ success: true, isSubscribed: false, subscribers: channel.subscribers });
+        const isSubscribed = channel.subscriberList.includes(req.user._id);
+
+        res.status(200).json({ success: true, isSubscribed, subscribers: channel.subscribers });
 
     } catch (err) {
         console.error("Check Subscription Error:", err);
