@@ -154,7 +154,7 @@ export const updateAvatar = async (req, res) => {
         res.status(200).json({
             statusCode: 200,
             message: 'Avatar updated successfully',
-            avatar: typeof user.avatar === "object" ? user.avatar?.url : user.avatar
+            data: formatUser(user)
         });
 
     } catch (err) {

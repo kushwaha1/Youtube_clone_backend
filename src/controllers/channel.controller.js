@@ -256,7 +256,7 @@ export const subscribeChannel = async (req, res) => {
 
         // Add user to subscriberList and increment count
         channel.subscriberList.push(req.user._id);
-        channel.subscribers = channel.subscriberList.length;
+        channel.subscribers = channel.subscribers + 1;
         await channel.save();
 
         res.status(200).json({ success: true, message: "Subscribed successfully", subscribers: channel.subscribers });
@@ -277,10 +277,18 @@ export const unsubscribeChannel = async (req, res) => {
         if (!channel) return res.status(404).json({ success: false, message: "Channel not found" });
 
         // Remove user if subscribed
+        // Remove user if subscribed
+        const wasSubscribed = channel.subscriberList.some(
+            userId => userId.toString() === req.user._id.toString()
+        );
+
         channel.subscriberList = channel.subscriberList.filter(
             userId => userId.toString() !== req.user._id.toString()
         );
-        channel.subscribers = channel.subscriberList.length;
+        
+        if (wasSubscribed) {
+            channel.subscribers = Math.max(0, channel.subscribers - 1);
+        }
         await channel.save();
 
         res.status(200).json({ success: true, message: "Unsubscribed successfully", subscribers: channel.subscribers });
