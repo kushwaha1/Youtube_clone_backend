@@ -49,6 +49,9 @@ const userSchema = new mongoose.Schema({
         ref: "Channel" 
     }],
 
+    // Seed tag for updating only seed data
+    seedTag: { type: String, default: null },
+
     // Timestamp of when the user document was created
     // Defaults to current date and time
     createdAt: { 

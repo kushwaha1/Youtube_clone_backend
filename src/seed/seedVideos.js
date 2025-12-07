@@ -593,7 +593,7 @@ const createVideosData = (users, channels) => {
         public_id: "thumbnails/mongodb"
       },
       videoUrl: {
-        url: "https://download.blender.org/demo/movies/BBB/bbb_sunflower_1080p_30fps_normal.mp4",
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
         public_id: "videos/mongodb"
       },
       description: "Learn MongoDB fundamentals. Database design and queries for beginners.",
@@ -612,7 +612,7 @@ const createVideosData = (users, channels) => {
         public_id: "thumbnails/mern-live"
       },
       videoUrl: {
-        url: "https://download.blender.org/demo/movies/BBB/bbb_sunflower_2160p_30fps_normal.mp4",
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4",
         public_id: "videos/mern-live"
       },
       description: "Building a MERN stack app live with real-time coding and explanations.",
@@ -935,7 +935,7 @@ const createVideosData = (users, channels) => {
         public_id: "thumbnails/js-to-ts"
       },
       videoUrl: {
-        url: "https://download.blender.org/demo/movies/BBB/bbb_sunflower_1080p_30fps_normal.mp4",
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
         public_id: "videos/js-to-ts"
       },
       description: "Step-by-step guide to migrate a JavaScript/React codebase to TypeScript.",
@@ -954,7 +954,7 @@ const createVideosData = (users, channels) => {
         public_id: "thumbnails/fullstack-frontend"
       },
       videoUrl: {
-        url: "https://download.blender.org/demo/movies/BBB/bbb_sunflower_2160p_30fps_normal.mp4",
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
         public_id: "videos/fullstack-frontend"
       },
       description: "Integrating modern frontend features with backend REST APIs.",
@@ -973,7 +973,7 @@ const createVideosData = (users, channels) => {
         public_id: "thumbnails/pwa"
       },
       videoUrl: {
-        url: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
         public_id: "videos/pwa"
       },
       description: "Make your web app installable and offline-ready with PWA features.",
@@ -1104,57 +1104,66 @@ const createVideosData = (users, channels) => {
 // Main seed function
 const seedDatabase = async () => {
   try {
-    // Connect to MongoDB
     await connectDB();
     console.log("MongoDB Connected Successfully");
 
-    // Check if videos already exist
-    const videoCount = await Video.countDocuments();
-    if (videoCount > 0) {
-      console.log("Videos already exist in database.");
-      console.log("Cleaning up old seed data (only related users, channels, and videos)...");
+    const SEED_TAG = 'SEED_DATA_2025';
+    const seedEmails = usersData.map(u => u.email);
+
+    // Check if seed data exists
+    const existingSeedUsers = await User.find({ 
+      $or: [
+        { seedTag: SEED_TAG },
+        { email: { $in: seedEmails } }
+      ]
+    });
+
+    if (existingSeedUsers.length > 0) {
+      console.log(`Found ${existingSeedUsers.length} seed users. Cleaning up...`);
       
-      // Get all existing videos
-      const existingVideos = await Video.find({});
+      // Get seed user IDs FIRST (before deleting)
+      const seedUserIds = existingSeedUsers.map(u => u._id);
       
-      // Collect unique uploader and channel IDs from videos
-      const uploaderIds = [...new Set(existingVideos.map(v => v.uploader?.toString()).filter(Boolean))];
-      const channelIds = [...new Set(existingVideos.map(v => v.channel?.toString()).filter(Boolean))];
+      // Delete seed channels FIRST (before users are deleted)
+      const deletedChannels = await Channel.deleteMany({ 
+        $or: [
+          { seedTag: SEED_TAG },
+          { owner: { $in: seedUserIds } }
+        ]
+      });
+      console.log(`Deleted ${deletedChannels.deletedCount} seed channels`);
       
-      // Delete comments related to these videos
-      await Comment.deleteMany({ video: { $in: existingVideos.map(v => v._id) } });
-      console.log("Deleted related comments");
+      // Delete seed videos
+      const deletedVideos = await Video.deleteMany({ 
+        $or: [
+          { seedTag: SEED_TAG },
+          { uploader: { $in: seedUserIds } }
+        ]
+      });
+      console.log(`Deleted ${deletedVideos.deletedCount} seed videos`);
       
-      // Delete all videos
-      await Video.deleteMany({});
-      console.log("Deleted all videos");
+      // Delete seed comments
+      await Comment.deleteMany({ seedTag: SEED_TAG });
+      console.log("Deleted seed comments");
       
-      // Delete only those channels that were used by videos
-      if (channelIds.length > 0) {
-        const deletedChannels = await Channel.deleteMany({ _id: { $in: channelIds } });
-        console.log(`Deleted ${deletedChannels.deletedCount} related channels`);
-      }
+      // Delete seed users LAST
+      const deletedUsers = await User.deleteMany({ _id: { $in: seedUserIds } });
+      console.log(`Deleted ${deletedUsers.deletedCount} seed users`);
       
-      // Delete only those users that were uploaders of videos
-      if (uploaderIds.length > 0) {
-        const deletedUsers = await User.deleteMany({ _id: { $in: uploaderIds } });
-        console.log(`Deleted ${deletedUsers.deletedCount} related users`);
-      }
-      
-      console.log("Cleanup completed! Now inserting fresh data...\n");
+      console.log("Cleanup completed! Now inserting fresh seed data...\n");
     }
 
     // 1. Hash passwords and Insert Users
     console.log("Hashing passwords and inserting users...");
     
-    // Hash all passwords before insertion
     const usersWithHashedPasswords = await Promise.all(
       usersData.map(async (user) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(user.password, salt);
         return {
           ...user,
-          password: hashedPassword
+          password: hashedPassword,
+          seedTag: SEED_TAG
         };
       })
     );
@@ -1164,7 +1173,11 @@ const seedDatabase = async () => {
 
     // 2. Create and Insert Channels
     console.log("Inserting channels...");
-    const channelsData = createChannelsData(users);
+    const channelsData = createChannelsData(users).map(ch => ({
+      ...ch,
+      seedTag: SEED_TAG,
+      subscriberList: []
+    }));
     const channels = await Channel.insertMany(channelsData);
     console.log(`${channels.length} channels inserted`);
 
@@ -1178,7 +1191,10 @@ const seedDatabase = async () => {
 
     // 4. Create and Insert Videos
     console.log("Inserting videos...");
-    const videosData = createVideosData(users, channels);
+    const videosData = createVideosData(users, channels).map(v => ({
+      ...v,
+      seedTag: SEED_TAG
+    }));
     const videos = await Video.insertMany(videosData);
     console.log(`${videos.length} videos inserted`);
 

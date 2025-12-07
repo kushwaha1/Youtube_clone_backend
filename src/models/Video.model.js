@@ -36,6 +36,9 @@ const videoSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User' 
     }],
+    
+    // Seed tag for updating only seed data
+    seedTag: { type: String, default: null },
 
     createdAt: { type: Date, default: Date.now() } // Timestamp of video upload
 });
